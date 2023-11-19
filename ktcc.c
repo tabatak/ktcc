@@ -145,6 +145,10 @@ Token *tokenize()
     return head.next;
 }
 
+///
+/// parser
+///
+
 // 抽象構文木のノードの種類
 typedef enum
 {
@@ -186,41 +190,9 @@ Node *new_node_num(int val)
 }
 
 Node *expr(void);
-
-// primary = num | "(" expr ")"
-Node *primary()
-{
-    if (consume('('))
-    {
-        Node *node = expr();
-        expect(')');
-        return node;
-    }
-
-    return new_node_num(expect_number());
-}
-
-// mul = primary ("*" primary | "/" primary)*
-Node *mul()
-{
-    Node *node = primary();
-
-    for (;;)
-    {
-        if (consume('*'))
-        {
-            node = new_node(ND_MUL, node, primary());
-        }
-        else if (consume('/'))
-        {
-            node = new_node(ND_DIV, node, primary());
-        }
-        else
-        {
-            return node;
-        }
-    }
-}
+Node *mul(void);
+Node *unary(void);
+Node *primary(void);
 
 // expr = mul ("+" mul | "-" mul)*
 Node *expr()
@@ -242,6 +214,55 @@ Node *expr()
             return node;
         }
     }
+}
+
+// mul = unary ("*" unary | "/" unary)*
+Node *mul()
+{
+    Node *node = unary();
+
+    for (;;)
+    {
+        if (consume('*'))
+        {
+            node = new_node(ND_MUL, node, unary());
+        }
+        else if (consume('/'))
+        {
+            node = new_node(ND_DIV, node, unary());
+        }
+        else
+        {
+            return node;
+        }
+    }
+}
+
+// unary = ("+" | "-")? unary
+Node *unary()
+{
+    if (consume('+'))
+    {
+        return primary();
+    }
+    if (consume('-'))
+    {
+        return new_node(ND_SUB, new_node_num(0), unary());
+    }
+    return primary();
+}
+
+// primary = num | "(" expr ")"
+Node *primary()
+{
+    if (consume('('))
+    {
+        Node *node = expr();
+        expect(')');
+        return node;
+    }
+
+    return new_node_num(expect_number());
 }
 
 // コード生成
