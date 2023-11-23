@@ -48,5 +48,8 @@ assert 7 '1 + 2; 3 + 4;'
 assert 3 'a = 3; a;'
 assert 8 'a = 3; z = 5; a + z;'
 assert 6 'a = z = 3; a + z;'
+# 複数文字の変数のテスト
+assert 3 'foo = 3; foo;'
+assert 8 'foo123 = 3; bar = 5; foo123 + bar;'
 
 echo OK

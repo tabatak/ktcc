@@ -3,6 +3,8 @@
 // 現在着目しているトークン
 Token *token;
 
+Obj *locals;
+
 // 次のトークンが期待している記号の時は、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op)
@@ -39,6 +41,19 @@ int expect_number()
     return val;
 }
 
+// ローカル変数の管理用
+Obj *find_var(Token *tok)
+{
+    for (Obj *var = locals; var; var = var->next)
+    {
+        if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len))
+        {
+            return var;
+        }
+    }
+    return NULL;
+}
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs)
 {
     Node *node = calloc(1, sizeof(Node));
@@ -73,12 +88,21 @@ Node *new_num(int val)
     return node;
 }
 
-Node *new_var(char name)
+Node *new_var(Obj *var)
 {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_VAR;
-    node->name = name;
+    node->var = var;
     return node;
+}
+
+Obj *new_lvar(char *name)
+{
+    Obj *var = calloc(1, sizeof(Obj));
+    var->name = name;
+    var->next = locals;
+    locals = var;
+    return var;
 }
 
 Node *expr(void);
@@ -260,7 +284,12 @@ Node *primary()
 
     if (token->kind == TK_IDENT)
     {
-        Node *node = new_var(*token->str);
+        Obj *var = find_var(token);
+        if (!var)
+        {
+            var = new_lvar(strndup(token->str, token->len));
+        }
+        Node *node = new_var(var);
         token = token->next;
         return node;
     }
@@ -268,7 +297,7 @@ Node *primary()
     return new_num(expect_number());
 }
 
-Node *parse(Token *tok)
+Function *parse(Token *tok)
 {
     token = tok;
     Node head = {};
@@ -279,6 +308,9 @@ Node *parse(Token *tok)
         cur = cur->next;
     }
 
-    return head.next;
+    Function *prog = calloc(1, sizeof(Function));
+    prog->body = head.next;
+    prog->locals = locals;
+    return prog;
     ;
 }

@@ -14,12 +14,16 @@ void pop(char *arg)
     depth--;
 }
 
+int align_to(int n, int align)
+{
+    return (n + align - 1) & ~(align - 1);
+}
+
 void gen_addr(Node *node)
 {
     if (node->kind == ND_VAR)
     {
-        int offset = (node->name - 'a' + 1) * 8;
-        printf("  lea rax, [rbp-%d]\n", offset);
+        printf("  lea rax, [rbp-%d]\n", node->var->offset);
         return;
     }
 }
@@ -106,8 +110,21 @@ void gen_stmt(Node *node)
     error("invalid statement");
 }
 
-void codegen(Node *node)
+void assign_lvar_offsets(Function *prog)
 {
+    int offset = 0;
+    for (Obj *var = prog->locals; var; var = var->next)
+    {
+        offset += 8;
+        var->offset = offset;
+    }
+    prog->stack_size = offset; // 複数文字のスタックサイズはアラインしなくても大丈夫そう
+}
+
+void codegen(Function *prog)
+{
+    assign_lvar_offsets(prog);
+
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");
     printf("main:\n");
@@ -115,9 +132,9 @@ void codegen(Node *node)
     // Prologue
     printf("  push rbp\n");
     printf("  mov rbp, rsp\n");
-    printf("  sub rsp, 208\n"); // 26 variables * 8 bytes
+    printf("  sub rsp, %d\n", prog->stack_size);
 
-    for (Node *n = node; n; n = n->next)
+    for (Node *n = prog->body; n; n = n->next)
     {
         gen_stmt(n);
     }

@@ -10,8 +10,8 @@ int main(int argc, char **argv)
     fprintf(stderr, "input: %s\n", argv[1]);
 
     Token *tok = tokenize(argv[1]);
-    Node *node = parse(tok);
+    Function *prog = parse(tok);
 
-    codegen(node);
+    codegen(prog);
     return 0;
 }

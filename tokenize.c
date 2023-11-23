@@ -66,6 +66,28 @@ bool startswith(char *p, char *q)
     return memcmp(p, q, strlen(q)) == 0;
 }
 
+/**
+ * identifierの先頭文字として使えるかを判定する
+ *
+ * @param c The character to check.
+ * @return true if the character is a valid identifier character, false otherwise.
+ */
+bool is_ident1(char c)
+{
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+}
+
+/**
+ * identifierの先頭文字以外の文字として使えるかを判定する
+ *
+ * @param c The character to check.
+ * @return true if the character is a valid identifier character, false otherwise.
+ */
+bool is_ident2(char c)
+{
+    return is_ident1(c) || ('0' <= c && c <= '9');
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p)
 {
@@ -109,9 +131,14 @@ Token *tokenize(char *p)
         }
 
         // 識別子
-        if ('a' <= *p && *p <= 'z')
+        if (is_ident1(*p))
         {
-            cur = new_token(TK_IDENT, cur, p++, 1);
+            char *q = p++;
+            while (is_ident2(*p))
+            {
+                p++;
+            }
+            cur = new_token(TK_IDENT, cur, q, p - q);
             continue;
         }
 

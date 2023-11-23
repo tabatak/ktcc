@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
@@ -43,6 +44,26 @@ Token *tokenize(char *user_input);
 // parse.c
 //
 
+typedef struct Node Node;
+
+// Local variable
+typedef struct Obj Obj;
+struct Obj
+{
+    Obj *next;
+    char *name;
+    int offset;
+};
+
+// Function
+typedef struct Function Function;
+struct Function
+{
+    Node *body;
+    Obj *locals;
+    int stack_size;
+};
+
 // 抽象構文木のノードの種類
 typedef enum
 {
@@ -60,8 +81,6 @@ typedef enum
     ND_VAR,       // variable
 } NodeKind;
 
-typedef struct Node Node;
-
 // 抽象構文木のノードの型
 struct Node
 {
@@ -70,13 +89,13 @@ struct Node
     Node *lhs;     // 左辺
     Node *rhs;     // 右辺
     int val;       // kindがND_NUMの場合のみ値が設定される
-    char name;     // kindがND_VARの場合のみ値が設定される
+    Obj *var;      // kindがND_VARの場合のみ値が設定される
 };
 
-Node *parse(Token *tok);
+Function *parse(Token *tok);
 
 //
 // codegen.c
 //
 // コード生成
-void codegen(Node *node);
+void codegen(Function *prog);
