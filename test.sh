@@ -26,5 +26,21 @@ assert 4 '(3 + 5) / 2'
 assert 5 '-10 + 15'
 assert 10 '- -10'
 assert 24 '(-6) * (-4)'
+# ==, != のテスト
+assert 1 '1 == 1'
+assert 0 '1 == 2'
+assert 1 '1 != 2'
+assert 0 '1 != 1'
+# <, <=, >, >= のテスト
+assert 1 '1 < 2'
+assert 0 '1 < 1'
+assert 1 '1 <= 2'
+assert 1 '1 <= 1'
+assert 0 '2 <= 1'
+assert 1 '2 > 1'
+assert 0 '1 > 1'
+assert 1 '2 >= 1'
+assert 1 '1 >= 1'
+assert 0 '1 >= 2'
 
 echo OK
