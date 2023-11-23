@@ -39,7 +39,6 @@ int expect_number()
     return val;
 }
 
-// 新しいノードを作成する
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs)
 {
     Node *node = calloc(1, sizeof(Node));
@@ -49,8 +48,24 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs)
     return node;
 }
 
-// 新しい数値のノードを作成する
-Node *new_node_num(int val)
+Node *new_binary(NodeKind kind, Node *lhs, Node *rhs)
+{
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = kind;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    return node;
+}
+
+Node *new_unary(NodeKind kind, Node *expr)
+{
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = kind;
+    node->lhs = expr;
+    return node;
+}
+
+Node *new_num(int val)
 {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
@@ -59,6 +74,7 @@ Node *new_node_num(int val)
 }
 
 Node *expr(void);
+Node *expr_stmt(void);
 Node *equality(void);
 Node *relational(void);
 Node *add(void);
@@ -67,6 +83,8 @@ Node *unary(void);
 Node *primary(void);
 
 /*
+    stmt       = expr-stmt
+    expr-stmt  = expr ";"
     expr       = equality
     equality   = relational ("==" relational | "!=" relational)*
     relational = add ("<" add | "<=" add | ">" add | ">=" add)*
@@ -76,11 +94,26 @@ Node *primary(void);
     primary    = num | "(" expr ")"
 */
 
+// stmt = expr-stmt
+Node *stmt()
+{
+    return expr_stmt();
+}
+
+// expr-stmt = expr ";"
+Node *expr_stmt()
+{
+    Node *node = new_unary(ND_EXPR_STMT, expr());
+    if (!consume(";"))
+    {
+        error("expect character ';'\n");
+    }
+    return node;
+}
+
 // expr = equality
 Node *expr()
 {
-    fprintf(stderr, "expr: %s\n", token->str);
-
     return equality();
 }
 
@@ -189,7 +222,7 @@ Node *unary()
     }
     if (consume("-"))
     {
-        return new_node(ND_SUB, new_node_num(0), unary());
+        return new_node(ND_SUB, new_num(0), unary());
     }
     return primary();
 }
@@ -204,16 +237,20 @@ Node *primary()
         return node;
     }
 
-    return new_node_num(expect_number());
+    return new_num(expect_number());
 }
 
 Node *parse(Token *tok)
 {
     token = tok;
-    Node *node = expr();
-    if (token->kind != TK_EOF)
+    Node head = {};
+    Node *cur = &head;
+    while (token->kind != TK_EOF)
     {
-        error_tok(tok, "extra token");
+        cur->next = stmt();
+        cur = cur->next;
     }
-    return node;
+
+    return head.next;
+    ;
 }

@@ -8,11 +8,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    fprintf(stderr, "argv: %s\n", argv[1]);
-
-    // トークナイズする
     Token *tok = tokenize(argv[1]);
     Node *node = parse(tok);
+
     codegen(node);
     return 0;
 }

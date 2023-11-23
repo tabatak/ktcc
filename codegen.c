@@ -1,23 +1,39 @@
 #include "ktcc.h"
 
+int depth;
+
+void push(void)
+{
+    printf("  push rax\n");
+    depth++;
+}
+
+void pop(char *arg)
+{
+    printf("  pop %s\n", arg);
+    depth--;
+}
+
 /**
  * Generates code for the given node.
  *
  * @param node The node to generate code for.
  */
-void gen(Node *node)
+void gen_expr(Node *node)
 {
     if (node->kind == ND_NUM)
     {
-        printf("  push %d\n", node->val);
+        printf("  mov rax, %d\n", node->val);
         return;
     }
 
-    gen(node->lhs);
-    gen(node->rhs);
+    gen_expr(node->lhs);
+    push();
+    gen_expr(node->rhs);
+    push();
 
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
+    pop("rdi");
+    pop("rax");
 
     switch (node->kind)
     {
@@ -55,8 +71,17 @@ void gen(Node *node)
         printf("  movzb rax, al\n");
         break;
     }
+}
 
-    printf("  push rax\n");
+void gen_stmt(Node *node)
+{
+    if (node->kind == ND_EXPR_STMT)
+    {
+        gen_expr(node->lhs);
+        assert(depth == 0);
+        return;
+    }
+    error("invalid statement");
 }
 
 void codegen(Node *node)
@@ -65,11 +90,12 @@ void codegen(Node *node)
     printf(".globl main\n");
     printf("main:\n");
 
-    // 抽象構文木を下りながらコード生成
-    gen(node);
+    for (Node *n = node; n; n = n->next)
+    {
+        gen_stmt(n);
+    }
 
     // スタックトップに式全体の値が残っているはずなので
     // それをRAXにロードして関数からの返り値とする
-    printf("  pop rax\n");
     printf("  ret\n");
 }
