@@ -73,8 +73,17 @@ Node *new_num(int val)
     return node;
 }
 
+Node *new_var(char name)
+{
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_VAR;
+    node->name = name;
+    return node;
+}
+
 Node *expr(void);
 Node *expr_stmt(void);
+Node *assign(void);
 Node *equality(void);
 Node *relational(void);
 Node *add(void);
@@ -85,13 +94,14 @@ Node *primary(void);
 /*
     stmt       = expr-stmt
     expr-stmt  = expr ";"
-    expr       = equality
+    expr       = assign
+    assign     = equality ("=" assign)?
     equality   = relational ("==" relational | "!=" relational)*
     relational = add ("<" add | "<=" add | ">" add | ">=" add)*
     add        = mul ("+" mul | "-" mul)*
     mul        = unary ("*" unary | "/" unary)*
     unary      = ("+" | "-")? primary
-    primary    = num | "(" expr ")"
+    primary    = num | ident | "(" expr ")"
 */
 
 // stmt = expr-stmt
@@ -111,10 +121,21 @@ Node *expr_stmt()
     return node;
 }
 
-// expr = equality
+// expr = assign
 Node *expr()
 {
-    return equality();
+    return assign();
+}
+
+// assign = equality ("=" assign)?
+Node *assign()
+{
+    Node *node = equality();
+    if (consume("="))
+    {
+        node = new_binary(ND_ASSIGN, node, assign());
+    }
+    return node;
 }
 
 // equality = relational ("==" relational | "!=" relational)*
@@ -234,6 +255,13 @@ Node *primary()
     {
         Node *node = expr();
         expect(")");
+        return node;
+    }
+
+    if (token->kind == TK_IDENT)
+    {
+        Node *node = new_var(*token->str);
+        token = token->next;
         return node;
     }
 

@@ -92,7 +92,7 @@ Token *tokenize(char *p)
             continue;
         }
         // 1文字の演算子
-        if (strchr("+-*/()<>;", *p))
+        if (strchr("+-*/()<>;=", *p))
         {
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
@@ -105,6 +105,13 @@ Token *tokenize(char *p)
             char *q = p;
             cur->val = strtol(p, &p, 10);
             cur->len = p - q;
+            continue;
+        }
+
+        // 識別子
+        if ('a' <= *p && *p <= 'z')
+        {
+            cur = new_token(TK_IDENT, cur, p++, 1);
             continue;
         }
 

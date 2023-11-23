@@ -14,6 +14,7 @@
 typedef enum
 {
     TK_RESERVED, // 記号
+    TK_IDENT,    // 識別子
     TK_NUM,      // 整数トークン
     TK_EOF,      // 入力の終わりを表すトークン
 } TokenKind;
@@ -55,6 +56,8 @@ typedef enum
     ND_LE,        // <=
     ND_NUM,       // 整数
     ND_EXPR_STMT, // expression statement
+    ND_ASSIGN,    // = 代入
+    ND_VAR,       // variable
 } NodeKind;
 
 typedef struct Node Node;
@@ -67,6 +70,7 @@ struct Node
     Node *lhs;     // 左辺
     Node *rhs;     // 右辺
     int val;       // kindがND_NUMの場合のみ値が設定される
+    char name;     // kindがND_VARの場合のみ値が設定される
 };
 
 Node *parse(Token *tok);

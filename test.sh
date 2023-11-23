@@ -44,5 +44,9 @@ assert 1 '1 >= 1;'
 assert 0 '1 >= 2;'
 # ; による複数の式のテスト
 assert 7 '1 + 2; 3 + 4;'
+# 1文字変数のテスト
+assert 3 'a = 3; a;'
+assert 8 'a = 3; z = 5; a + z;'
+assert 6 'a = z = 3; a + z;'
 
 echo OK
