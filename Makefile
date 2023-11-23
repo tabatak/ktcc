@@ -1,6 +1,11 @@
 CFLAGS=-std=c11 -g -static
+SRCS=$(wildcard *.c)
+OBJS=$(SRCS:.c=.o)
 
-ktcc: ktcc.c
+ktcc: $(OBJS)
+		$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(OBJS): ktcc.h
 
 test: ktcc
 		./test.sh
