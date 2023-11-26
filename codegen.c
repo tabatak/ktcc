@@ -26,6 +26,8 @@ void gen_addr(Node *node)
         printf("  lea rax, [rbp-%d]\n", node->var->offset);
         return;
     }
+
+    error("not an lvalue");
 }
 
 /**

@@ -18,6 +18,7 @@ typedef enum
     TK_IDENT,    // 識別子
     TK_NUM,      // 整数トークン
     TK_RETURN,   // return
+    TK_KEYWORD,  // keyword
     TK_EOF,      // 入力の終わりを表すトークン
 } TokenKind;
 
@@ -29,16 +30,15 @@ struct Token
     TokenKind kind; // トークンの型
     Token *next;    // 次の入力トークン
     int val;        // kindがTK_NUMの場合、その数値
-    char *str;      // トークン文字列
+    char *loc;      // トークン位置
     int len;        // トークンの長さ
 };
 
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
-
-Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-
+bool equal(Token *tok, char *op);
+Token *skip(Token *tok, char *op);
 Token *tokenize(char *user_input);
 
 //

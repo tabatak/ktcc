@@ -1,6 +1,6 @@
 #include "ktcc.h"
 
-static char *user_input;
+static char *current_input;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -19,8 +19,8 @@ void error_at(char *loc, char *fmt, ...)
     va_list ap;
     va_start(ap, fmt);
 
-    int pos = loc - user_input;
-    fprintf(stderr, "%s\n", user_input);
+    int pos = loc - current_input;
+    fprintf(stderr, "%s\n", current_input);
     fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
     fprintf(stderr, "^ ");
     vfprintf(stderr, fmt, ap);
@@ -32,74 +32,85 @@ void error_tok(Token *tok, char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    error_at(tok->str, fmt, ap);
+    error_at(tok->loc, fmt, ap);
 }
 
-/**
- * Creates a new token with the specified kind, string, and length.
- *
- * @param kind The kind of the token.
- * @param cur The current token.
- * @param str The string value of the token.
- * @param len The length of the string value.
- * @return The newly created token.
- */
-Token *new_token(TokenKind kind, Token *cur, char *str, int len)
+// Compares the value of a token with a given string.
+bool equal(Token *tok, char *op)
+{
+    return memcmp(tok->loc, op, tok->len) == 0 && op[tok->len] == '\0';
+}
+
+// Consumes the current token if it matches the given string.
+Token *skip(Token *tok, char *op)
+{
+    if (!equal(tok, op))
+    {
+        error_tok(tok, "'%s'ではありません", op);
+    }
+    return tok->next;
+}
+
+// Creates a new token.
+Token *new_token(TokenKind kind, char *start, char *end)
 {
     Token *tok = calloc(1, sizeof(Token));
     tok->kind = kind;
-    tok->str = str;
-    tok->len = len;
-    cur->next = tok;
+    tok->loc = start;
+    tok->len = end - start;
     return tok;
 }
 
-/**
- * Checks if a string starts with another string.
- *
- * @param p The string to check.
- * @param q The prefix string to compare with.
- * @return true if the string starts with the prefix, false otherwise.
- */
+// Checks if a string starts with another string.
 bool startswith(char *p, char *q)
 {
     return memcmp(p, q, strlen(q)) == 0;
 }
 
-/**
- * identifierの先頭文字として使えるかを判定する
- *
- * @param c The character to check.
- * @return true if the character is a valid identifier character, false otherwise.
- */
+// identifierの先頭文字として使えるかを判定する
 bool is_ident1(char c)
 {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
 }
 
-/**
- * identifierの先頭文字以外の文字として使えるかを判定する
- *
- * @param c The character to check.
- * @return true if the character is a valid identifier character, false otherwise.
- */
+// identifierの先頭文字以外の文字として使えるかを判定する
 bool is_ident2(char c)
 {
     return is_ident1(c) || ('0' <= c && c <= '9');
 }
 
+// 識別子に使用できる文字かを判定する
 bool is_alnum(char c)
 {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || ('0' <= c && c <= '9');
 }
 
+int read_punct(char *p)
+{
+    if (startswith(p, "==") || startswith(p, "!=") || startswith(p, "<=") || startswith(p, ">="))
+    {
+        return 2;
+    }
+    return ispunct(*p) ? 1 : 0;
+}
+
+void convert_keywords(Token *tok)
+{
+    for (Token *t = tok; t->kind != TK_EOF; t = t->next)
+    {
+        if (equal(t, "return"))
+        {
+            t->kind = TK_RETURN;
+        }
+    }
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p)
 {
-    char *user_input = p;
+    current_input = p;
 
-    Token head;
-    head.next = NULL;
+    Token head = {};
     Token *cur = &head;
 
     while (*p)
@@ -111,39 +122,17 @@ Token *tokenize(char *p)
             continue;
         }
 
-        // 複数文字の演算子
-        if (startswith(p, "==") || startswith(p, "!=") || startswith(p, "<=") || startswith(p, ">="))
-        {
-            cur = new_token(TK_RESERVED, cur, p, 2);
-            p += 2;
-            continue;
-        }
-        // 1文字の演算子
-        if (strchr("+-*/()<>;=", *p))
-        {
-            cur = new_token(TK_RESERVED, cur, p++, 1);
-            continue;
-        }
-
         // 数字
         if (isdigit(*p))
         {
-            cur = new_token(TK_NUM, cur, p, 0);
+            cur = cur->next = new_token(TK_NUM, p, p);
             char *q = p;
             cur->val = strtol(p, &p, 10);
             cur->len = p - q;
             continue;
         }
 
-        // return
-        if (startswith(p, "return") && !is_alnum(p[6]))
-        {
-            cur = new_token(TK_RETURN, cur, p, 6);
-            p += 6;
-            continue;
-        }
-
-        // 識別子
+        // 識別子 or キーワード
         if (is_ident1(*p))
         {
             char *q = p++;
@@ -151,13 +140,23 @@ Token *tokenize(char *p)
             {
                 p++;
             }
-            cur = new_token(TK_IDENT, cur, q, p - q);
+            cur = cur->next = new_token(TK_IDENT, q, p);
+            continue;
+        }
+
+        // Punctuators
+        int punct_len = read_punct(p);
+        if (punct_len)
+        {
+            cur = cur->next = new_token(TK_RESERVED, p, p + punct_len);
+            p += punct_len;
             continue;
         }
 
         error_at(p, "トークナイズできません");
     }
 
-    new_token(TK_EOF, cur, "eof", 0);
+    cur = cur->next = new_token(TK_EOF, p, p);
+    convert_keywords(head.next);
     return head.next;
 }
