@@ -17,7 +17,6 @@ typedef enum
     TK_RESERVED, // 記号
     TK_IDENT,    // 識別子
     TK_NUM,      // 整数トークン
-    TK_RETURN,   // return
     TK_KEYWORD,  // keyword
     TK_EOF,      // 入力の終わりを表すトークン
 } TokenKind;
@@ -80,6 +79,7 @@ typedef enum
     ND_EXPR_STMT, // expression statement
     ND_ASSIGN,    // = 代入
     ND_VAR,       // variable
+    ND_IF,        // if文
     ND_BLOCK,     // { ... }
     ND_RETURN,    // return
 } NodeKind;
@@ -94,7 +94,13 @@ struct Node
     int val;       // kindがND_NUMの場合のみ値が設定される
     Obj *var;      // kindがND_VARの場合のみ値が設定される
 
-    Node *body; // { ... } 内の文を保持
+    // if文
+    Node *cond;
+    Node *then;
+    Node *els;
+
+    // ブロック
+    Node *body;
 };
 
 Function *parse(Token *tok);

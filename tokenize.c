@@ -85,6 +85,20 @@ bool is_alnum(char c)
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || ('0' <= c && c <= '9');
 }
 
+// キーワードに使用できる文字列かを判定する
+bool is_keyword(Token *tok)
+{
+    static char *kw[] = {"return", "if", "else"};
+    for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++)
+    {
+        if (equal(tok, kw[i]))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 int read_punct(char *p)
 {
     if (startswith(p, "==") || startswith(p, "!=") || startswith(p, "<=") || startswith(p, ">="))
@@ -98,9 +112,9 @@ void convert_keywords(Token *tok)
 {
     for (Token *t = tok; t->kind != TK_EOF; t = t->next)
     {
-        if (equal(t, "return"))
+        if (is_keyword(t))
         {
-            t->kind = TK_RETURN;
+            t->kind = TK_KEYWORD;
         }
     }
 }
