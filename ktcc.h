@@ -80,7 +80,7 @@ typedef enum
     ND_ASSIGN,    // = 代入
     ND_VAR,       // variable
     ND_IF,        // if文
-    ND_FOR,       // for文
+    ND_FOR,       // for文 or while文
     ND_BLOCK,     // { ... }
     ND_RETURN,    // return
 } NodeKind;

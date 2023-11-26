@@ -72,5 +72,8 @@ assert 2 '{ for ( i = 0; i < 2; i = i + 1) { 0; } return i; }'
 assert 55 '{ i = 0; j = 0; for ( i = 0; i <= 10; i = i + 1) { j = i + j; } return j; }'
 assert 3 '{ for (;;) { return 3; } return 5; }'
 assert 15 '{ a = 0; for ( i = 0; i <= 10; i = i + 1 ) { if ( i == 2 ) { a = a + 10; } if ( i == 10 ) { a = a + 5; } } return a; }'
+# while文のテスト
+assert 10 '{ i = 0; while ( i < 10 ) { i = i + 1; } return i; }'
+
 
 echo OK

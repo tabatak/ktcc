@@ -92,7 +92,7 @@ bool is_alnum(char c)
 // キーワードに使用できる文字列かを判定する
 bool is_keyword(Token *tok)
 {
-    static char *kw[] = {"return", "if", "else", "for"};
+    static char *kw[] = {"return", "if", "else", "for", "while"};
     for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++)
     {
         if (equal(tok, kw[i]))
