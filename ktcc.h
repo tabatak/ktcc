@@ -80,6 +80,7 @@ typedef enum
     ND_EXPR_STMT, // expression statement
     ND_ASSIGN,    // = 代入
     ND_VAR,       // variable
+    ND_BLOCK,     // { ... }
     ND_RETURN,    // return
 } NodeKind;
 
@@ -92,6 +93,8 @@ struct Node
     Node *rhs;     // 右辺
     int val;       // kindがND_NUMの場合のみ値が設定される
     Obj *var;      // kindがND_VARの場合のみ値が設定される
+
+    Node *body; // { ... } 内の文を保持
 };
 
 Function *parse(Token *tok);

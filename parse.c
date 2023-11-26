@@ -60,6 +60,7 @@ Obj *new_lvar(char *name)
     return var;
 }
 
+Node *compound_stmt(Token **rest, Token *tok);
 Node *expr(Token **rest, Token *tok);
 Node *expr_stmt(Token **rest, Token *tok);
 Node *assign(Token **rest, Token *tok);
@@ -71,16 +72,19 @@ Node *unary(Token **rest, Token *tok);
 Node *primary(Token **rest, Token *tok);
 
 /*
-    stmt       = "return" expr ";" | expr-stmt
-    expr-stmt  = expr ";"
-    expr       = assign
-    assign     = equality ("=" assign)?
-    equality   = relational ("==" relational | "!=" relational)*
+    stmt = "return" expr ";"
+                    | "{" compound-stmt
+                    | expr-stmt
+    compound-stmt = stmt* "}"
+    expr-stmt = expr ";"
+    expr = assign
+    assign = equality ("=" assign)?
+    equality = relational ("==" relational | "!=" relational)*
     relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-    add        = mul ("+" mul | "-" mul)*
-    mul        = unary ("*" unary | "/" unary)*
-    unary      = ("+" | "-")? primary
-    primary    = num | ident | "(" expr ")"
+    add = mul ("+" mul | "-" mul)*
+    mul = unary ("*" unary | "/" unary)*
+    unary = ("+" | "-")? primary
+    primary = num | ident | "(" expr ")"
 */
 
 // stmt = "return" expr ";" | expr-stmt
@@ -92,7 +96,33 @@ Node *stmt(Token **rest, Token *tok)
         *rest = skip(tok, ";");
         return node;
     }
+
+    if (equal(tok, "{"))
+    {
+        Node *node = compound_stmt(&tok, tok->next);
+        *rest = tok;
+        return node;
+    }
+
     return expr_stmt(rest, tok);
+}
+
+// compound-stmt = stmt* "}"
+Node *compound_stmt(Token **rest, Token *tok)
+{
+    Node head = {};
+    Node *cur = &head;
+
+    while (!equal(tok, "}"))
+    {
+        cur = cur->next = stmt(&tok, tok);
+    }
+
+    Node *node = new_node(ND_BLOCK);
+    node->body = head.next;
+
+    *rest = tok->next;
+    return node;
 }
 
 // expr-stmt = expr ";"
@@ -272,16 +302,13 @@ Node *primary(Token **rest, Token *tok)
 
 Function *parse(Token *tok)
 {
+    tok = skip(tok, "{");
+
     Node head = {};
     Node *cur = &head;
 
-    while (tok->kind != TK_EOF)
-    {
-        cur = cur->next = stmt(&tok, tok);
-    }
-
     Function *prog = calloc(1, sizeof(Function));
-    prog->body = head.next;
+    prog->body = compound_stmt(&tok, tok);
     prog->locals = locals;
     return prog;
     ;
