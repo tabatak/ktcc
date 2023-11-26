@@ -14,11 +14,8 @@ void error(char *fmt, ...)
 }
 
 // エラー箇所を報告する
-void error_at(char *loc, char *fmt, ...)
+void verror_at(char *loc, char *fmt, va_list ap)
 {
-    va_list ap;
-    va_start(ap, fmt);
-
     int pos = loc - current_input;
     fprintf(stderr, "%s\n", current_input);
     fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
@@ -28,11 +25,18 @@ void error_at(char *loc, char *fmt, ...)
     exit(1);
 }
 
+void error_at(char *loc, char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    verror_at(loc, fmt, ap);
+}
+
 void error_tok(Token *tok, char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    error_at(tok->loc, fmt, ap);
+    verror_at(tok->loc, fmt, ap);
 }
 
 // Compares the value of a token with a given string.
@@ -88,7 +92,7 @@ bool is_alnum(char c)
 // キーワードに使用できる文字列かを判定する
 bool is_keyword(Token *tok)
 {
-    static char *kw[] = {"return", "if", "else"};
+    static char *kw[] = {"return", "if", "else", "for"};
     for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++)
     {
         if (equal(tok, kw[i]))

@@ -34,7 +34,7 @@ struct Token
 };
 
 void error(char *fmt, ...);
-void error_at(char *loc, char *fmt, ...);
+void verror_at(char *loc, char *fmt, va_list ap);
 void error_tok(Token *tok, char *fmt, ...);
 bool equal(Token *tok, char *op);
 Token *skip(Token *tok, char *op);
@@ -80,6 +80,7 @@ typedef enum
     ND_ASSIGN,    // = 代入
     ND_VAR,       // variable
     ND_IF,        // if文
+    ND_FOR,       // for文
     ND_BLOCK,     // { ... }
     ND_RETURN,    // return
 } NodeKind;
@@ -94,10 +95,12 @@ struct Node
     int val;       // kindがND_NUMの場合のみ値が設定される
     Obj *var;      // kindがND_VARの場合のみ値が設定される
 
-    // if文
+    // if文 or for文
     Node *cond;
     Node *then;
     Node *els;
+    Node *init;
+    Node *inc;
 
     // ブロック
     Node *body;

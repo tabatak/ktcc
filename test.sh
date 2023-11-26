@@ -66,5 +66,11 @@ assert 4 '{ if (0) { 1; 2; return 3; } else { return 4; } }'
 assert 3 '{ if (1) { 1; 2; return 3; } else { return 4; } }'
 assert 3 '{ if (0) { 1; } else { 0; } if ( 1 ) { return 3; } else { return 4; } }'
 assert 9 '{ a = 10; if (1) { a = 9; } return a;}'
+# for文のテスト
+assert 1 '{ for ( i = 0; i < 2; i = i + 1) { 0; } return 1; }' 
+assert 2 '{ for ( i = 0; i < 2; i = i + 1) { 0; } return i; }' 
+assert 55 '{ i = 0; j = 0; for ( i = 0; i <= 10; i = i + 1) { j = i + j; } return j; }'
+assert 3 '{ for (;;) { return 3; } return 5; }'
+assert 15 '{ a = 0; for ( i = 0; i <= 10; i = i + 1 ) { if ( i == 2 ) { a = a + 10; } if ( i == 10 ) { a = a + 5; } } return a; }'
 
 echo OK
