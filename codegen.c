@@ -101,12 +101,19 @@ void gen_expr(Node *node)
 
 void gen_stmt(Node *node)
 {
-    if (node->kind == ND_EXPR_STMT)
+    switch (node->kind)
     {
+    case ND_RETURN:
         gen_expr(node->lhs);
-        assert(depth == 0);
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+        printf("  ret\n");
+        return;
+    case ND_EXPR_STMT:
+        gen_expr(node->lhs);
         return;
     }
+
     error("invalid statement");
 }
 
@@ -137,6 +144,7 @@ void codegen(Function *prog)
     for (Node *n = prog->body; n; n = n->next)
     {
         gen_stmt(n);
+        assert(depth == 0);
     }
 
     // Epilogue

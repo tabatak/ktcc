@@ -9,7 +9,7 @@ Obj *locals;
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op)
 {
-    if (token->kind != TK_RESERVED || strlen(op) != token->len || memcmp(token->str, op, token->len))
+    if (!(token->kind == TK_RESERVED || token->kind == TK_RETURN) || strlen(op) != token->len || memcmp(token->str, op, token->len))
     {
         return false;
     }
@@ -116,7 +116,7 @@ Node *unary(void);
 Node *primary(void);
 
 /*
-    stmt       = expr-stmt
+    stmt       = "return" expr ";" | expr-stmt
     expr-stmt  = expr ";"
     expr       = assign
     assign     = equality ("=" assign)?
@@ -128,9 +128,15 @@ Node *primary(void);
     primary    = num | ident | "(" expr ")"
 */
 
-// stmt = expr-stmt
+// stmt = "return" expr ";" | expr-stmt
 Node *stmt()
 {
+    if (consume("return"))
+    {
+        Node *node = new_unary(ND_RETURN, expr());
+        expect(";");
+        return node;
+    }
     return expr_stmt();
 }
 

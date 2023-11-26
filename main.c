@@ -7,7 +7,6 @@ int main(int argc, char **argv)
         fprintf(stderr, "引数の個数が正しくありません\n");
         return 1;
     }
-    fprintf(stderr, "input: %s\n", argv[1]);
 
     Token *tok = tokenize(argv[1]);
     Function *prog = parse(tok);

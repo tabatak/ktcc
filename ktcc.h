@@ -17,6 +17,7 @@ typedef enum
     TK_RESERVED, // 記号
     TK_IDENT,    // 識別子
     TK_NUM,      // 整数トークン
+    TK_RETURN,   // return
     TK_EOF,      // 入力の終わりを表すトークン
 } TokenKind;
 
@@ -79,6 +80,7 @@ typedef enum
     ND_EXPR_STMT, // expression statement
     ND_ASSIGN,    // = 代入
     ND_VAR,       // variable
+    ND_RETURN,    // return
 } NodeKind;
 
 // 抽象構文木のノードの型

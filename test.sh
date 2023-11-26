@@ -51,5 +51,9 @@ assert 6 'a = z = 3; a + z;'
 # 複数文字の変数のテスト
 assert 3 'foo = 3; foo;'
 assert 8 'foo123 = 3; bar = 5; foo123 + bar;'
+# return文 のテスト
+assert 1 'return 1; 2; 3;'
+assert 2 '1; return 2; 3;'
+assert 3 '1; 2; return 3;'
 
 echo OK
