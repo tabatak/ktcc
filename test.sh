@@ -65,5 +65,6 @@ assert 2 '{ if (2-1) return 2; return 3; }'
 assert 4 '{ if (0) { 1; 2; return 3; } else { return 4; } }'
 assert 3 '{ if (1) { 1; 2; return 3; } else { return 4; } }'
 assert 3 '{ if (0) { 1; } else { 0; } if ( 1 ) { return 3; } else { return 4; } }'
+assert 9 '{ a = 10; if (1) { a = 9; } return a;}'
 
 echo OK
