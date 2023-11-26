@@ -86,7 +86,8 @@ Node *primary(Token **rest, Token *tok);
     relational = add ("<" add | "<=" add | ">" add | ">=" add)*
     add = mul ("+" mul | "-" mul)*
     mul = unary ("*" unary | "/" unary)*
-    unary = ("+" | "-")? primary
+    unary = ("+" | "-" | "*" | "&")? unary
+                | primary
     primary = num | ident | "(" expr ")"
 */
 
@@ -313,21 +314,31 @@ Node *mul(Token **rest, Token *tok)
     }
 }
 
-// unary = ("+" | "-")? unary
+// unary = ("+" | "-" | "*" | "&") unary
+//          | primary
 Node *unary(Token **rest, Token *tok)
 {
     if (equal(tok, "+"))
     {
-        return primary(rest, tok->next);
+        return unary(rest, tok->next);
     }
     if (equal(tok, "-"))
     {
-        return new_binary(ND_SUB, new_num(0), unary(rest, tok->next));
+        return new_unary(ND_NEG, unary(rest, tok->next));
     }
+    if (equal(tok, "&"))
+    {
+        return new_unary(ND_ADDR, unary(rest, tok->next));
+    }
+    if (equal(tok, "*"))
+    {
+        return new_unary(ND_DEREF, unary(rest, tok->next));
+    }
+
     return primary(rest, tok);
 }
 
-// primary = num | "(" expr ")"
+// primary = num | ident | "(" expr ")"
 Node *primary(Token **rest, Token *tok)
 {
     if (equal(tok, "("))

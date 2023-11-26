@@ -78,6 +78,9 @@ typedef enum
     ND_NUM,       // 整数
     ND_EXPR_STMT, // expression statement
     ND_ASSIGN,    // = 代入
+    ND_NEG,       // unary -
+    ND_ADDR,      // unary &
+    ND_DEREF,     // unary *
     ND_VAR,       // variable
     ND_IF,        // if文
     ND_FOR,       // for文 or while文
