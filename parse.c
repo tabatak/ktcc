@@ -402,8 +402,33 @@ Node *unary(Token **rest, Token *tok)
     return primary(rest, tok);
 }
 
-// primary = "(" expr ")" | ident args? | num
-// args = "(" ")"
+// funccall = ident "(" (assign ("," assign)*)? ")"
+Node *funccall(Token **rest, Token *tok)
+{
+    Token *start = tok;
+    tok = tok->next->next;
+
+    Node head = {};
+    Node *cur = &head;
+
+    while (!equal(tok, ")"))
+    {
+        if (cur != &head)
+        {
+            tok = skip(tok, ",");
+        }
+        cur = cur->next = assign(&tok, tok);
+    }
+
+    *rest = skip(tok, ")");
+
+    Node *node = new_node(ND_FUNCCALL);
+    node->funcname = strndup(start->loc, start->len);
+    node->args = head.next;
+    return node;
+}
+
+// primary = "(" expr ")" | funccall | num
 Node *primary(Token **rest, Token *tok)
 {
     if (equal(tok, "("))
@@ -418,10 +443,7 @@ Node *primary(Token **rest, Token *tok)
         // 関数呼び出し
         if (equal(tok->next, "("))
         {
-            Node *node = new_node(ND_FUNCCALL);
-            node->funcname = strndup(tok->loc, tok->len);
-            *rest = skip(tok->next->next, ")"); // memo: 関数名のトークンも読み飛ばす
-            return node;
+            return funccall(rest, tok);
         }
 
         // 変数

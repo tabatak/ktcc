@@ -1,6 +1,7 @@
 #include "ktcc.h"
 
-int depth;
+static int depth;
+static char *argregisters[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 void gen_expr(Node *node);
 
@@ -77,9 +78,23 @@ void gen_expr(Node *node)
         printf("  mov [rdi], rax\n");
         return;
     case ND_FUNCCALL:
+    {
+        int nargs = 0;
+        for (Node *arg = node->args; arg; arg = arg->next)
+        {
+            gen_expr(arg);
+            push();
+            nargs++;
+        }
+
+        for (int i = nargs - 1; i >= 0; i--)
+        {
+            pop(argregisters[i]);
+        }
         printf("  mov rax, 0\n");
         printf("  call %s\n", node->funcname);
         return;
+    }
     }
 
     gen_expr(node->lhs);

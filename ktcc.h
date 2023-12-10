@@ -143,6 +143,7 @@ struct Node
 
     // 関数呼び出し
     char *funcname;
+    Node *args;
 };
 
 Function *parse(Token *tok);
