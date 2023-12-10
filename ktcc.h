@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct Type Type;
+
 //
 // tokenize.c
 //
@@ -55,6 +57,27 @@ struct Obj
     int offset;
 };
 
+//
+// type.c
+//
+
+typedef enum
+{
+    TY_INT,
+    TY_PTR,
+} TypeKind;
+
+struct Type
+{
+    TypeKind kind;
+    Type *base;
+};
+
+extern Type *ty_int;
+
+bool is_integer(Type *ty);
+void add_type(Node *node);
+
 // Function
 typedef struct Function Function;
 struct Function
@@ -93,6 +116,7 @@ struct Node
 {
     NodeKind kind; // ノードの型
     Node *next;    // 次のノード
+    Type *ty;      // 型
     Node *lhs;     // 左辺
     Node *rhs;     // 右辺
     int val;       // kindがND_NUMの場合のみ値が設定される

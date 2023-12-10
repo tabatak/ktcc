@@ -71,6 +71,9 @@ Node *mul(Token **rest, Token *tok);
 Node *unary(Token **rest, Token *tok);
 Node *primary(Token **rest, Token *tok);
 
+Node *new_add(Node *lhs, Node *rhs, Token *tok);
+Node *new_sub(Node *lhs, Node *rhs, Token *tok);
+
 /*
     stmt = "return" expr ";"
                     | "if" "(" expr ")" stmt ("else" stmt)?
@@ -170,6 +173,7 @@ Node *compound_stmt(Token **rest, Token *tok)
     while (!equal(tok, "}"))
     {
         cur = cur->next = stmt(&tok, tok);
+        add_type(cur);
     }
 
     Node *node = new_node(ND_BLOCK);
@@ -277,12 +281,12 @@ Node *add(Token **rest, Token *tok)
     {
         if (equal(tok, "+"))
         {
-            node = new_binary(ND_ADD, node, mul(&tok, tok->next));
+            node = new_add(node, mul(&tok, tok->next), tok);
             continue;
         }
         if (equal(tok, "-"))
         {
-            node = new_binary(ND_SUB, node, mul(&tok, tok->next));
+            node = new_sub(node, mul(&tok, tok->next), tok);
             continue;
         }
 
@@ -368,6 +372,70 @@ Node *primary(Token **rest, Token *tok)
     }
 
     error_tok(tok, "expected an expression");
+}
+
+Node *new_add(Node *lhs, Node *rhs, Token *tok)
+{
+    add_type(lhs);
+    add_type(rhs);
+
+    // 数値 + 数値 の場合は、数値同士の足し算として扱う
+    if (is_integer(lhs->ty) && is_integer(rhs->ty))
+    {
+        return new_binary(ND_ADD, lhs, rhs);
+    }
+
+    // 両方がポインタの場合はエラー
+    if (lhs->ty->base && rhs->ty->base)
+    {
+        error_tok(tok, "invalid operands");
+    }
+
+    // 数値 + ポインタの場合は、ポインタが左オペランドになるように入れ替える
+    // 計算結果はポインタ型になる
+    if (!lhs->ty->base && rhs->ty->base)
+    {
+        Node *tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    }
+
+    // ポインタ + 数値の場合は、右オペランドをポインタのサイズ分*数値にする
+    // MEMO: 実行時まで値がわからないので、コンパイル時には計算できない？？
+    rhs = new_binary(ND_MUL, rhs, new_num(8));
+    return new_binary(ND_ADD, lhs, rhs);
+}
+
+Node *new_sub(Node *lhs, Node *rhs, Token *tok)
+{
+    add_type(lhs);
+    add_type(rhs);
+
+    // 数値 - 数値 の場合は、数値同士の引き算として扱う
+    if (is_integer(lhs->ty) && is_integer(rhs->ty))
+    {
+        return new_binary(ND_SUB, lhs, rhs);
+    }
+
+    if (lhs->ty->base && is_integer(rhs->ty))
+    {
+        rhs = new_binary(ND_MUL, rhs, new_num(8));
+        add_type(rhs);
+        Node *node = new_binary(ND_SUB, lhs, rhs);
+        node->ty = lhs->ty;
+        return node;
+    }
+
+    // ポインタ - ポインタ の場合は、間にある要素の数を計算する
+    // 計算結果は数値型になる
+    if (lhs->ty->base && rhs->ty->base)
+    {
+        Node *node = new_binary(ND_SUB, lhs, rhs);
+        node->ty = ty_int;
+        return new_binary(ND_DIV, node, new_num(8));
+    }
+
+    error_tok(tok, "invalid operands");
 }
 
 Function *parse(Token *tok)
