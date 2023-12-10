@@ -402,7 +402,8 @@ Node *unary(Token **rest, Token *tok)
     return primary(rest, tok);
 }
 
-// primary = num | ident | "(" expr ")"
+// primary = "(" expr ")" | ident args? | num
+// args = "(" ")"
 Node *primary(Token **rest, Token *tok)
 {
     if (equal(tok, "("))
@@ -414,6 +415,16 @@ Node *primary(Token **rest, Token *tok)
 
     if (tok->kind == TK_IDENT)
     {
+        // 関数呼び出し
+        if (equal(tok->next, "("))
+        {
+            Node *node = new_node(ND_FUNCCALL);
+            node->funcname = strndup(tok->loc, tok->len);
+            *rest = skip(tok->next->next, ")"); // memo: 関数名のトークンも読み飛ばす
+            return node;
+        }
+
+        // 変数
         Obj *var = find_var(tok);
         if (!var)
         {

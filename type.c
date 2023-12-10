@@ -51,6 +51,7 @@ void add_type(Node *node)
     case ND_LE:
     case ND_VAR:
     case ND_NUM:
+    case ND_FUNCCALL:
         node->ty = ty_int;
         return;
     case ND_ADDR:

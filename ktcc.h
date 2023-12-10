@@ -116,6 +116,7 @@ typedef enum
     ND_IF,        // if文
     ND_FOR,       // for文 or while文
     ND_BLOCK,     // { ... }
+    ND_FUNCCALL,  // 関数呼び出し
     ND_RETURN,    // return
 } NodeKind;
 
@@ -139,6 +140,9 @@ struct Node
 
     // ブロック
     Node *body;
+
+    // 関数呼び出し
+    char *funcname;
 };
 
 Function *parse(Token *tok);

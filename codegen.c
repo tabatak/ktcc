@@ -76,6 +76,10 @@ void gen_expr(Node *node)
         pop("rdi");
         printf("  mov [rdi], rax\n");
         return;
+    case ND_FUNCCALL:
+        printf("  mov rax, 0\n");
+        printf("  call %s\n", node->funcname);
+        return;
     }
 
     gen_expr(node->lhs);
@@ -195,7 +199,7 @@ void assign_lvar_offsets(Function *prog)
         offset += 8;
         var->offset = offset;
     }
-    prog->stack_size = offset; // 複数文字のスタックサイズはアラインしなくても大丈夫そう
+    prog->stack_size = align_to(offset, 16);
 }
 
 void codegen(Function *prog)
