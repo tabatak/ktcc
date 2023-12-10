@@ -41,6 +41,7 @@ void error_tok(Token *tok, char *fmt, ...);
 bool equal(Token *tok, char *op);
 Token *skip(Token *tok, char *op);
 Token *tokenize(char *user_input);
+bool consume(Token **rest, Token *tok, char *str);
 
 //
 // parse.c
@@ -54,6 +55,7 @@ struct Obj
 {
     Obj *next;
     char *name;
+    Type *ty;
     int offset;
 };
 
@@ -70,13 +72,19 @@ typedef enum
 struct Type
 {
     TypeKind kind;
+
+    // Pointer
     Type *base;
+
+    // Declaration
+    Token *name;
 };
 
 extern Type *ty_int;
 
 bool is_integer(Type *ty);
 void add_type(Node *node);
+Type *pointer_to(Type *base);
 
 // Function
 typedef struct Function Function;

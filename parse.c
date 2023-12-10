@@ -51,15 +51,17 @@ Node *new_var(Obj *var)
     return node;
 }
 
-Obj *new_lvar(char *name)
+Obj *new_lvar(char *name, Type *ty)
 {
     Obj *var = calloc(1, sizeof(Obj));
     var->name = name;
+    var->ty = ty;
     var->next = locals;
     locals = var;
     return var;
 }
 
+Node *declaration(Token **rest, Token *tok);
 Node *compound_stmt(Token **rest, Token *tok);
 Node *expr(Token **rest, Token *tok);
 Node *expr_stmt(Token **rest, Token *tok);
@@ -74,25 +76,76 @@ Node *primary(Token **rest, Token *tok);
 Node *new_add(Node *lhs, Node *rhs, Token *tok);
 Node *new_sub(Node *lhs, Node *rhs, Token *tok);
 
-/*
-    stmt = "return" expr ";"
-                    | "if" "(" expr ")" stmt ("else" stmt)?
-                    | "for" "(" expr-stmt expr? ";" expr? ")" stmt
-                    | "while" "(" expr ")" stmt
-                    | "{" compound-stmt
-                    | expr-stmt
-    compound-stmt = stmt* "}"
-    expr-stmt = expr? ";"
-    expr = assign
-    assign = equality ("=" assign)?
-    equality = relational ("==" relational | "!=" relational)*
-    relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-    add = mul ("+" mul | "-" mul)*
-    mul = unary ("*" unary | "/" unary)*
-    unary = ("+" | "-" | "*" | "&")? unary
-                | primary
-    primary = num | ident | "(" expr ")"
-*/
+char *get_ident(Token *tok)
+{
+    if (tok->kind != TK_IDENT)
+    {
+        error_tok(tok, "expected an identifier");
+    }
+    return strndup(tok->loc, tok->len);
+}
+
+// declspec = "int"
+Type *declspec(Token **rest, Token *tok)
+{
+    *rest = skip(tok, "int");
+    return ty_int;
+}
+
+// declarator = "*"* ident
+Type *declarator(Token **rest, Token *tok, Type *ty)
+{
+    while (consume(&tok, tok, "*"))
+    {
+        // memo: 複数回のderefに対応するために、tyを更新している
+        ty = pointer_to(ty);
+    }
+
+    if (tok->kind != TK_IDENT)
+    {
+        error_tok(tok, "expected a variable name");
+    }
+
+    ty->name = tok;
+    *rest = tok->next;
+    return ty;
+}
+
+// declaration = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+Node *declaration(Token **rest, Token *tok)
+{
+    Type *basety = declspec(&tok, tok);
+
+    Node head = {};
+    Node *cur = &head;
+
+    int i = 0;
+    while (!equal(tok, ";"))
+    {
+        if (i++)
+        {
+            tok = skip(tok, ",");
+        }
+
+        Type *ty = declarator(&tok, tok, basety);
+        Obj *var = new_lvar(get_ident(ty->name), ty);
+
+        if (!equal(tok, "="))
+        {
+            continue;
+        }
+
+        Node *lhs = new_var(var);
+        Node *rhs = assign(&tok, tok->next);
+        Node *node = new_binary(ND_ASSIGN, lhs, rhs);
+        cur = cur->next = new_unary(ND_EXPR_STMT, node);
+    }
+
+    Node *node = new_node(ND_BLOCK); // TODO: なぜND_BLOCKを使っているのか？
+    node->body = head.next;
+    *rest = tok->next;
+    return node;
+}
 
 // stmt = "return" expr ";" | expr-stmt
 Node *stmt(Token **rest, Token *tok)
@@ -164,7 +217,7 @@ Node *stmt(Token **rest, Token *tok)
     return expr_stmt(rest, tok);
 }
 
-// compound-stmt = stmt* "}"
+// compound-stmt = (declaration | stmt)* "}"
 Node *compound_stmt(Token **rest, Token *tok)
 {
     Node head = {};
@@ -172,7 +225,14 @@ Node *compound_stmt(Token **rest, Token *tok)
 
     while (!equal(tok, "}"))
     {
-        cur = cur->next = stmt(&tok, tok);
+        if (equal(tok, "int"))
+        {
+            cur = cur->next = declaration(&tok, tok);
+        }
+        else
+        {
+            cur = cur->next = stmt(&tok, tok);
+        }
         add_type(cur);
     }
 
@@ -357,7 +417,7 @@ Node *primary(Token **rest, Token *tok)
         Obj *var = find_var(tok);
         if (!var)
         {
-            var = new_lvar(strndup(tok->loc, tok->len));
+            error_tok(tok, "undefined variable");
         }
         Node *node = new_var(var);
         *rest = tok->next;
