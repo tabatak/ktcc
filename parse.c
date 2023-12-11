@@ -92,7 +92,21 @@ Type *declspec(Token **rest, Token *tok)
     return ty_int;
 }
 
-// declarator = "*"* ident
+// type-suffix = ("(" func-params? ")")?
+Type *type_suffix(Token **rest, Token *tok, Type *ty)
+{
+    if (equal(tok, "("))
+    {
+        // memo: 現段階では引数は扱わない
+        *rest = skip(tok->next, ")");
+        return func_type(ty);
+    }
+
+    *rest = tok;
+    return ty;
+}
+
+// declarator = "*"* ident type-suffix
 Type *declarator(Token **rest, Token *tok, Type *ty)
 {
     while (consume(&tok, tok, "*"))
@@ -106,8 +120,8 @@ Type *declarator(Token **rest, Token *tok, Type *ty)
         error_tok(tok, "expected a variable name");
     }
 
+    ty = type_suffix(rest, tok->next, ty);
     ty->name = tok;
-    *rest = tok->next;
     return ty;
 }
 
@@ -531,16 +545,35 @@ Node *new_sub(Node *lhs, Node *rhs, Token *tok)
     error_tok(tok, "invalid operands");
 }
 
+Function *function(Token **rest, Token *tok)
+{
+    Type *ty = declspec(&tok, tok);
+    ty = declarator(&tok, tok, ty);
+
+    // ローカル変数のリストを初期化
+    locals = NULL;
+
+    // functionを作成
+    Function *fn = calloc(1, sizeof(Function));
+    fn->name = get_ident(ty->name);
+
+    // ブロックの中を読む
+    tok = skip(tok, "{");
+    fn->body = compound_stmt(rest, tok);
+    fn->locals = locals;
+    return fn;
+}
+
+// program = function*
 Function *parse(Token *tok)
 {
-    tok = skip(tok, "{");
+    Function head = {};
+    Function *cur = &head;
 
-    Node head = {};
-    Node *cur = &head;
+    while (tok->kind != TK_EOF)
+    {
+        cur = cur->next = function(&tok, tok);
+    }
 
-    Function *prog = calloc(1, sizeof(Function));
-    prog->body = compound_stmt(&tok, tok);
-    prog->locals = locals;
-    return prog;
-    ;
+    return head.next;
 }

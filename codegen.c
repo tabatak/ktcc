@@ -2,6 +2,7 @@
 
 static int depth;
 static char *argregisters[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+static Function *current_func;
 
 void gen_expr(Node *node);
 
@@ -194,9 +195,7 @@ void gen_stmt(Node *node)
         return;
     case ND_RETURN:
         gen_expr(node->lhs);
-        printf("  mov rsp, rbp\n");
-        printf("  pop rbp\n");
-        printf("  ret\n");
+        printf("  jmp .L.return.%s\n", current_func->name);
         return;
     case ND_EXPR_STMT:
         gen_expr(node->lhs);
@@ -208,13 +207,16 @@ void gen_stmt(Node *node)
 
 void assign_lvar_offsets(Function *prog)
 {
-    int offset = 0;
-    for (Obj *var = prog->locals; var; var = var->next)
+    for (Function *fn = prog; fn; fn = fn->next)
     {
-        offset += 8;
-        var->offset = offset;
+        int offset = 0;
+        for (Obj *var = fn->locals; var; var = var->next)
+        {
+            offset += 8;
+            var->offset = offset;
+        }
+        fn->stack_size = align_to(offset, 16);
     }
-    prog->stack_size = align_to(offset, 16);
 }
 
 void codegen(Function *prog)
@@ -222,22 +224,25 @@ void codegen(Function *prog)
     assign_lvar_offsets(prog);
 
     printf(".intel_syntax noprefix\n");
-    printf(".globl main\n");
-    printf("main:\n");
 
-    // Prologue
-    printf("  push rbp\n");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", prog->stack_size);
-
-    for (Node *n = prog->body; n; n = n->next)
+    for (Function *fn = prog; fn; fn = fn->next)
     {
-        gen_stmt(n);
-        assert(depth == 0);
-    }
+        printf(".globl %s\n", fn->name);
+        printf("%s:\n", fn->name);
+        current_func = fn;
 
-    // Epilogue
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-    printf("  ret\n");
+        // Prologue
+        printf("  push rbp\n");
+        printf("  mov rbp, rsp\n");
+        printf("  sub rsp, %d\n", fn->stack_size);
+
+        gen_stmt(fn->body);
+        assert(depth == 0);
+
+        // Epilogue
+        printf(".L.return.%s:\n", fn->name);
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+        printf("  ret\n");
+    }
 }
