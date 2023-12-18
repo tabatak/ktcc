@@ -23,6 +23,13 @@ Type *func_type(Type *return_ty)
     return ty;
 }
 
+Type *copy_type(Type *ty)
+{
+    Type *ret = calloc(1, sizeof(Type));
+    *ret = *ty;
+    return ret;
+}
+
 void add_type(Node *node)
 {
     if (!node || node->ty)
@@ -39,6 +46,10 @@ void add_type(Node *node)
     add_type(node->inc);
 
     for (Node *n = node->body; n; n = n->next)
+    {
+        add_type(n);
+    }
+    for (Node *n = node->args; n; n = n->next)
     {
         add_type(n);
     }

@@ -61,6 +61,7 @@ Obj *new_lvar(char *name, Type *ty)
     return var;
 }
 
+Type *declarator(Token **rest, Token *tok, Type *ty);
 Node *declaration(Token **rest, Token *tok);
 Node *compound_stmt(Token **rest, Token *tok);
 Node *expr(Token **rest, Token *tok);
@@ -93,13 +94,32 @@ Type *declspec(Token **rest, Token *tok)
 }
 
 // type-suffix = ("(" func-params? ")")?
+// func-params = param ("," param)*
+// param       = declspec declarator
 Type *type_suffix(Token **rest, Token *tok, Type *ty)
 {
     if (equal(tok, "("))
     {
-        // memo: 現段階では引数は扱わない
-        *rest = skip(tok->next, ")");
-        return func_type(ty);
+        tok = tok->next;
+
+        Type head = {};
+        Type *cur = &head;
+
+        while (!equal(tok, ")"))
+        {
+            if (cur != &head)
+            {
+                tok = skip(tok, ",");
+            }
+            Type *basety = declspec(&tok, tok);
+            Type *ty = declarator(&tok, tok, basety);
+            cur = cur->next = copy_type(ty);
+        }
+
+        ty = func_type(ty);
+        ty->params = head.next;
+        *rest = tok->next;
+        return ty;
     }
 
     *rest = tok;
@@ -545,6 +565,15 @@ Node *new_sub(Node *lhs, Node *rhs, Token *tok)
     error_tok(tok, "invalid operands");
 }
 
+void create_param_lvars(Type *param)
+{
+    if (param)
+    {
+        create_param_lvars(param->next);
+        new_lvar(get_ident(param->name), param);
+    }
+}
+
 Function *function(Token **rest, Token *tok)
 {
     Type *ty = declspec(&tok, tok);
@@ -556,6 +585,9 @@ Function *function(Token **rest, Token *tok)
     // functionを作成
     Function *fn = calloc(1, sizeof(Function));
     fn->name = get_ident(ty->name);
+    // 引数を処理
+    create_param_lvars(ty->params);
+    fn->params = locals;
 
     // ブロックの中を読む
     tok = skip(tok, "{");
