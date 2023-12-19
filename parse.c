@@ -86,6 +86,15 @@ char *get_ident(Token *tok)
     return strndup(tok->loc, tok->len);
 }
 
+int get_number(Token *tok)
+{
+    if (tok->kind != TK_NUM)
+    {
+        error_tok(tok, "expected a number");
+    }
+    return tok->val;
+}
+
 // declspec = "int"
 Type *declspec(Token **rest, Token *tok)
 {
@@ -93,33 +102,45 @@ Type *declspec(Token **rest, Token *tok)
     return ty_int;
 }
 
-// type-suffix = ("(" func-params? ")")?
-// func-params = param ("," param)*
-// param       = declspec declarator
+// func-params = (param ("," param)*)? ")"
+// param = declspec declarator
+Type *func_params(Token **rest, Token *tok, Type *ty)
+{
+    Type head = {};
+    Type *cur = &head;
+
+    while (!equal(tok, ")"))
+    {
+        if (cur != &head)
+        {
+            tok = skip(tok, ",");
+        }
+        Type *basety = declspec(&tok, tok);
+        Type *ty = declarator(&tok, tok, basety);
+        cur = cur->next = copy_type(ty);
+    }
+
+    ty = func_type(ty);
+    ty->params = head.next;
+    *rest = tok->next;
+    return ty;
+}
+
+// type-suffix = "(" func-params?
+//              | "[" num "]"
+//              | ε
 Type *type_suffix(Token **rest, Token *tok, Type *ty)
 {
     if (equal(tok, "("))
     {
-        tok = tok->next;
+        return func_params(rest, tok->next, ty);
+    }
 
-        Type head = {};
-        Type *cur = &head;
-
-        while (!equal(tok, ")"))
-        {
-            if (cur != &head)
-            {
-                tok = skip(tok, ",");
-            }
-            Type *basety = declspec(&tok, tok);
-            Type *ty = declarator(&tok, tok, basety);
-            cur = cur->next = copy_type(ty);
-        }
-
-        ty = func_type(ty);
-        ty->params = head.next;
-        *rest = tok->next;
-        return ty;
+    if (equal(tok, "["))
+    {
+        int size = get_number(tok->next);
+        *rest = skip(tok->next->next, "]");
+        return array_of(ty, size);
     }
 
     *rest = tok;
@@ -529,7 +550,7 @@ Node *new_add(Node *lhs, Node *rhs, Token *tok)
 
     // ポインタ + 数値の場合は、右オペランドをポインタのサイズ分*数値にする
     // MEMO: 実行時まで値がわからないので、コンパイル時には計算できない？？
-    rhs = new_binary(ND_MUL, rhs, new_num(8));
+    rhs = new_binary(ND_MUL, rhs, new_num(lhs->ty->base->size));
     return new_binary(ND_ADD, lhs, rhs);
 }
 
@@ -546,7 +567,7 @@ Node *new_sub(Node *lhs, Node *rhs, Token *tok)
 
     if (lhs->ty->base && is_integer(rhs->ty))
     {
-        rhs = new_binary(ND_MUL, rhs, new_num(8));
+        rhs = new_binary(ND_MUL, rhs, new_num(lhs->ty->base->size));
         add_type(rhs);
         Node *node = new_binary(ND_SUB, lhs, rhs);
         node->ty = lhs->ty;
@@ -559,7 +580,7 @@ Node *new_sub(Node *lhs, Node *rhs, Token *tok)
     {
         Node *node = new_binary(ND_SUB, lhs, rhs);
         node->ty = ty_int;
-        return new_binary(ND_DIV, node, new_num(8));
+        return new_binary(ND_DIV, node, new_num(lhs->ty->base->size));
     }
 
     error_tok(tok, "invalid operands");

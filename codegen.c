@@ -29,11 +29,27 @@ int align_to(int n, int align)
     return (n + align - 1) & ~(align - 1);
 }
 
+void load(Type *ty)
+{
+    if (ty->kind == TY_ARRAY)
+    {
+        return;
+    }
+    printf("  mov rax, [rax]\n");
+}
+
+void store(void)
+{
+    pop("rdi");
+    printf("  mov [rdi], rax\n");
+}
+
 void gen_addr(Node *node)
 {
     switch (node->kind)
     {
     case ND_VAR:
+        printf("  // var %s\n", node->var->name);
         printf("  lea rax, [rbp-%d]\n", node->var->offset);
         return;
     case ND_DEREF:
@@ -41,7 +57,7 @@ void gen_addr(Node *node)
         return;
     }
 
-    error("not an lvalue");
+    error("gen_addr: not an lvalue");
 }
 
 /**
@@ -62,11 +78,13 @@ void gen_expr(Node *node)
         return;
     case ND_VAR:
         gen_addr(node);
-        printf("  mov rax, [rax]\n");
+        // fprintf(stderr, "  // ND_VAR %s\n", node->var->name);
+        load(node->ty);
         return;
     case ND_DEREF:
         gen_expr(node->lhs);
-        printf("  mov rax, [rax]\n");
+        // fprintf(stderr, "  // ND_DEREF %s\n", node->var->name);
+        load(node->ty);
         return;
     case ND_ADDR:
         gen_addr(node->lhs);
@@ -75,8 +93,7 @@ void gen_expr(Node *node)
         gen_addr(node->lhs);
         push();
         gen_expr(node->rhs);
-        pop("rdi");
-        printf("  mov [rdi], rax\n");
+        store();
         return;
     case ND_FUNCCALL:
     {
@@ -212,7 +229,7 @@ void assign_lvar_offsets(Function *prog)
         int offset = 0;
         for (Obj *var = fn->locals; var; var = var->next)
         {
-            offset += 8;
+            offset += var->ty->size;
             var->offset = offset;
         }
         fn->stack_size = align_to(offset, 16);

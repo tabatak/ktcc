@@ -68,11 +68,13 @@ typedef enum
     TY_INT,
     TY_PTR,
     TY_FUNC,
+    TY_ARRAY,
 } TypeKind;
 
 struct Type
 {
     TypeKind kind;
+    int size;
 
     // Pointer
     Type *base;
@@ -84,6 +86,9 @@ struct Type
     Type *return_ty;
     Type *params;
     Type *next;
+
+    // Array
+    int array_len;
 };
 
 extern Type *ty_int;
@@ -93,6 +98,7 @@ void add_type(Node *node);
 Type *pointer_to(Type *base);
 Type *func_type(Type *return_ty);
 Type *copy_type(Type *ty);
+Type *array_of(Type *base, int size);
 
 // Function
 typedef struct Function Function;
